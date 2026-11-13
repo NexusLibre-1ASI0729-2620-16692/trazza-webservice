@@ -1,6 +1,8 @@
-package trazzaplatform.api.iam.application.internal.outboundservices;
+package com.trazza.iam.application.internal.outboundservices;
 
-/// <summary>Password hashing (BCrypt). The password itself is never stored.</summary>
+/**
+ * Password hashing (BCrypt). The password itself is never stored.
+ */
 public interface IHashingService {
 
     String hashPassword(String password);

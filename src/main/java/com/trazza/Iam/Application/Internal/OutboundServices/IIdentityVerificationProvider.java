@@ -1,8 +1,10 @@
-package trazzaplatform.api.iam.application.internal.outboundservices;
+package com.trazza.iam.application.internal.outboundservices;
 
 import java.util.concurrent.CompletableFuture;
 
-/// <summary>Identity provider (RENIEC). The MVP uses a simulated provider.</summary>
+/**
+ * Identity provider (RENIEC). The MVP uses a simulated provider.
+ */
 public interface IIdentityVerificationProvider {
 
     CompletableFuture<VerificationResult> verifyAsync(String dni, String fullName);

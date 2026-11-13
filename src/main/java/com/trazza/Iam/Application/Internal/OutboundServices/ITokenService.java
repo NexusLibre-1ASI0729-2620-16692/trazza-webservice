@@ -1,11 +1,13 @@
-package trazzaplatform.api.iam.application.internal.outboundservices;
+package com.trazza.iam.application.internal.outboundservices;
 
-import trazzaplatform.api.iam.domain.model.aggregates.User;
+import com.trazza.iam.domain.model.aggregates.User;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
-/// <summary>Access token (JWT) and opaque refresh token generation.</summary>
+/**
+ * Access token (JWT) and opaque refresh token generation.
+ */
 public interface ITokenService {
 
     AccessTokenResult generateAccessToken(User user);
@@ -18,7 +20,7 @@ public interface ITokenService {
 
     // --- Records para reemplazar las tuplas de C# ---
 
-    record AccessTokenResult(String token, Instant expiresAt) {}
+    record AccessTokenResult(String token, LocalDateTime expiresAt) {}
 
-    record RefreshTokenResult(String token, byte[] hash, Instant expiresAt) {}
+    record RefreshTokenResult(String token, byte[] hash, LocalDateTime expiresAt) {}
 }

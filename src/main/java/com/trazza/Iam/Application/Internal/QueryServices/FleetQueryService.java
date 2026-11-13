@@ -1,18 +1,16 @@
-package trazzaplatform.api.iam.application.internal.queryservices;
+package com.trazza.iam.application.internal.queryservices;
 
-import trazzaplatform.api.iam.domain.model.aggregates.Driver;
-import trazzaplatform.api.iam.domain.model.aggregates.SavedAddress;
-import trazzaplatform.api.iam.domain.model.aggregates.Vehicle;
-import trazzaplatform.api.iam.domain.repositories.ICarrierProfileRepository;
-import trazzaplatform.api.iam.domain.repositories.IDriverRepository;
-import trazzaplatform.api.iam.domain.repositories.ISavedAddressRepository;
-import trazzaplatform.api.iam.domain.repositories.IVehicleRepository;
-import trazzaplatform.api.iam.domain.services.IFleetQueryService;
+import com.trazza.iam.domain.model.aggregates.Driver;
+import com.trazza.iam.domain.model.aggregates.SavedAddress;
+import com.trazza.iam.domain.model.aggregates.Vehicle;
+import com.trazza.iam.domain.repositories.ICarrierProfileRepository;
+import com.trazza.iam.domain.repositories.IDriverRepository;
+import com.trazza.iam.domain.repositories.ISavedAddressRepository;
+import com.trazza.iam.domain.repositories.IVehicleRepository;
+import com.trazza.iam.domain.services.IFleetQueryService;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 
 public class FleetQueryService implements IFleetQueryService {
 
@@ -33,29 +31,25 @@ public class FleetQueryService implements IFleetQueryService {
     }
 
     @Override
-    public CompletionStage<List<Vehicle>> listVehiclesAsync(Long userId) {
-        return carrierProfileRepository.findByUserIdAsync(userId)
-                .thenCompose(profile -> {
-                    if (profile == null) {
-                        return CompletableFuture.completedFuture(Collections.emptyList());
-                    }
-                    return vehicleRepository.listByCarrierAsync(profile.getId());
-                });
+    public List<Vehicle> listVehicles(Long userId) {
+        var profile = carrierProfileRepository.findByUserId(userId);
+        if (profile == null) {
+            return Collections.emptyList();
+        }
+        return vehicleRepository.listByCarrier(profile.getId());
     }
 
     @Override
-    public CompletionStage<List<Driver>> listDriversAsync(Long userId) {
-        return carrierProfileRepository.findByUserIdAsync(userId)
-                .thenCompose(profile -> {
-                    if (profile == null) {
-                        return CompletableFuture.completedFuture(Collections.emptyList());
-                    }
-                    return driverRepository.listByCarrierAsync(profile.getId());
-                });
+    public List<Driver> listDrivers(Long userId) {
+        var profile = carrierProfileRepository.findByUserId(userId);
+        if (profile == null) {
+            return Collections.emptyList();
+        }
+        return driverRepository.listByCarrier(profile.getId());
     }
 
     @Override
-    public CompletionStage<List<SavedAddress>> listSavedAddressesAsync(Long userId) {
-        return savedAddressRepository.listByUserAsync(userId);
+    public List<SavedAddress> listSavedAddresses(Long userId) {
+        return savedAddressRepository.listByUser(userId);
     }
 }
