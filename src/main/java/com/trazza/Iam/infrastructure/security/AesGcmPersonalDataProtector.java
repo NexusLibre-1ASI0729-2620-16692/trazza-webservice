@@ -1,6 +1,6 @@
-package com.trazza.iam.infrastructure.security;
+package com.trazza.platform.iam.infrastructure.security;
 
-import com.trazza.iam.application.internal.outboundservices.PersonalDataProtector;
+import com.trazza.platform.iam.application.internal.outboundservices.security.PersonalDataProtector;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Cipher;
@@ -8,94 +8,80 @@ import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
 
 /**
- * AES-256-GCM encryption stored as nonce (12) + ciphertext + tag (16), and HMAC-SHA256 of the DNI.
+ * AES-256-GCM encryption stored as {@code nonce (12) + ciphertext + tag (16)}, and HMAC-SHA256 of the DNI.
+ * The layout is the same as the .NET version, so both can read the same rows.
  */
 @Service
 public class AesGcmPersonalDataProtector implements PersonalDataProtector {
 
     private static final int NONCE_SIZE = 12;
-    private static final int TAG_SIZE = 16;
-    private static final int TAG_BITS = TAG_SIZE * 8;
-
-    private final byte[] encryptionKey;
-    private final byte[] hashKey;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private static final int TAG_BITS = 128;
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private final SecretKeySpec encryptionKey;
+    private final SecretKeySpec hashKey;
 
     public AesGcmPersonalDataProtector(PersonalDataSettings settings) {
-        this.encryptionKey = Base64.getDecoder().decode(settings.getEncryptionKey());
-        this.hashKey = Base64.getDecoder().decode(settings.getHashKey());
+        var encryption = decodeKey(settings.encryptionKey());
+        var hash = decodeKey(settings.hashKey());
+        this.encryptionKey = new SecretKeySpec(encryption, "AES");
+        this.hashKey = new SecretKeySpec(hash, "HmacSHA256");
+    }
 
-        if (this.encryptionKey.length != 32 || this.hashKey.length != 32) {
-            throw new IllegalStateException("PersonalData keys must be 32 bytes encoded in Base64.");
+    private static byte[] decodeKey(String base64) {
+        try {
+            var key = Base64.getDecoder().decode(base64 == null ? "" : base64.trim());
+            if (key.length == 32) return key;
+        } catch (IllegalArgumentException ignored) {
+            // reported below
         }
+        throw new IllegalStateException("trazza.personal-data keys must be Base64 keys of 32 bytes "
+                + "(PERSONAL_DATA_ENCRYPTION_KEY and PERSONAL_DATA_HASH_KEY).");
     }
 
     @Override
     public byte[] encrypt(String plainText) {
         try {
-            byte[] plain = plainText.getBytes(StandardCharsets.UTF_8);
-            byte[] nonce = new byte[NONCE_SIZE];
-            secureRandom.nextBytes(nonce);
-
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            SecretKeySpec keySpec = new SecretKeySpec(encryptionKey, "AES");
-            GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_BITS, nonce);
-
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
-            byte[] cipherTextWithTag = cipher.doFinal(plain);
-
-            // El resultado en Java ya incluye el tag al final (ciphertext + tag)
-            // Estructura final: nonce (12) + ciphertext + tag (16)
-            byte[] result = new byte[NONCE_SIZE + cipherTextWithTag.length];
+            var nonce = new byte[NONCE_SIZE];
+            RANDOM.nextBytes(nonce);
+            var cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, encryptionKey, new GCMParameterSpec(TAG_BITS, nonce));
+            var cipherAndTag = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
+            var result = new byte[NONCE_SIZE + cipherAndTag.length];
             System.arraycopy(nonce, 0, result, 0, NONCE_SIZE);
-            System.arraycopy(cipherTextWithTag, 0, result, NONCE_SIZE, cipherTextWithTag.length);
-
+            System.arraycopy(cipherAndTag, 0, result, NONCE_SIZE, cipherAndTag.length);
             return result;
-        } catch (Exception e) {
-            throw new IllegalStateException("Error encrypting personal data", e);
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("Personal data could not be encrypted.", exception);
         }
     }
 
     @Override
-    public String decrypt(byte[] cipherData) {
+    public String decrypt(byte[] data) {
         try {
-            if (cipherData.length < NONCE_SIZE + TAG_SIZE) {
-                throw new IllegalArgumentException("Invalid cipher data length");
-            }
-
-            byte[] nonce = new byte[NONCE_SIZE];
-            System.arraycopy(cipherData, 0, nonce, 0, NONCE_SIZE);
-
-            int cipherTextLength = cipherData.length - NONCE_SIZE;
-            byte[] cipherTextWithTag = new byte[cipherTextLength];
-            System.arraycopy(cipherData, NONCE_SIZE, cipherTextWithTag, 0, cipherTextLength);
-
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            SecretKeySpec keySpec = new SecretKeySpec(encryptionKey, "AES");
-            GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_BITS, nonce);
-
-            cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec);
-            byte[] plain = cipher.doFinal(cipherTextWithTag);
-
+            var nonce = Arrays.copyOfRange(data, 0, NONCE_SIZE);
+            var cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, encryptionKey, new GCMParameterSpec(TAG_BITS, nonce));
+            var plain = cipher.doFinal(data, NONCE_SIZE, data.length - NONCE_SIZE);
             return new String(plain, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            throw new IllegalStateException("Error decrypting personal data", e);
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException("Personal data could not be decrypted (check the shared keys).", exception);
         }
     }
 
     @Override
     public byte[] hashDni(String dni) {
         try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec keySpec = new SecretKeySpec(hashKey, "HmacSHA256");
-            mac.init(keySpec);
+            var mac = Mac.getInstance("HmacSHA256");
+            mac.init(hashKey);
             return mac.doFinal(dni.getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            throw new IllegalStateException("Error hashing DNI", e);
+        } catch (GeneralSecurityException exception) {
+            throw new IllegalStateException(exception);
         }
     }
 }

@@ -1,18 +1,16 @@
-package com.trazza.iam.domain.model.valueobjects;
+package com.trazza.platform.iam.domain.model.valueobjects;
 
-import com.trazza.shared.domain.model.CommandError;
-import com.trazza.shared.domain.model.Result;
+import com.trazza.platform.shared.domain.model.CommandError;
+import com.trazza.platform.shared.domain.model.Result;
 
-public class LicensePlate {
-    private final String value;
+import java.util.Locale;
 
-    private LicensePlate(String value) { this.value = value; }
-    public String getValue() { return value; }
+/** Peruvian vehicle plate normalized as {@code ABC-123}. */
+public record LicensePlate(String value) {
 
-    public static Result<LicensePlate, CommandError> create(String raw) {
-        if (raw == null || raw.trim().length() < 6 || raw.trim().length() > 10) {
-            return Result.failure(CommandError.validation("invalid-plate"));
-        }
-        return Result.success(new LicensePlate(raw.trim().toUpperCase()));
+    public static Result<LicensePlate> create(String value) {
+        var compact = (value == null ? "" : value.toUpperCase(Locale.ROOT)).replaceAll("[^A-Z0-9]", "");
+        if (compact.length() != 6) return Result.failure(CommandError.validation("plate-invalid"));
+        return Result.success(new LicensePlate(compact.substring(0, 3) + "-" + compact.substring(3)));
     }
 }

@@ -1,44 +1,61 @@
-package com.trazza.iam.domain.model.aggregates;
+package com.trazza.platform.iam.domain.model.aggregates;
 
-import com.trazza.iam.domain.model.valueobjects.DriverSex;
-import com.trazza.shared.domain.model.entities.IAuditableEntity;
-import java.time.LocalDateTime;
+import com.trazza.platform.iam.domain.model.valueobjects.DriverSex;
+import com.trazza.platform.shared.domain.model.entities.AuditableEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Getter;
 
-public class Driver implements IAuditableEntity {
+/** Driver of a fleet ({@code drivers}). Drivers have no account: only name, optional sex and experience (1 to 5 stars). */
+@Entity
+@Table(name = "drivers")
+@Getter
+public class Driver extends AuditableEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private Long carrierProfileId;
+
+    @Column(nullable = false, length = 200)
     private String fullName;
+
+    @Enumerated(EnumType.STRING)
     private DriverSex sex;
-    private byte experienceStars;
-    private boolean isActive;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
-    protected Driver() { this.fullName = ""; }
+    @Column(nullable = false)
+    private int experienceStars;
 
-    public Driver(Long carrierProfileId, String fullName, DriverSex sex, byte experienceStars) {
+    @Column(name = "is_active", nullable = false)
+    private boolean active;
+
+    protected Driver() {
+    }
+
+    public Driver(Long carrierProfileId, String fullName, DriverSex sex, int experienceStars) {
         this.carrierProfileId = carrierProfileId;
         this.fullName = fullName;
         this.sex = sex;
         this.experienceStars = experienceStars;
-        this.isActive = true;
+        this.active = true;
     }
 
-    public Long getId() { return id; }
-    public Long getCarrierProfileId() { return carrierProfileId; }
-    public String getFullName() { return fullName; }
-    public DriverSex getSex() { return sex; }
-    public byte getExperienceStars() { return experienceStars; }
-    public boolean isActive() { return isActive; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-
-    public void update(String fullName, DriverSex sex, byte experienceStars, boolean isActive) {
+    public void update(String fullName, DriverSex sex, int experienceStars, boolean active) {
         this.fullName = fullName;
         this.sex = sex;
         this.experienceStars = experienceStars;
-        this.isActive = isActive;
+        this.active = active;
     }
 
-    public void deactivate() { this.isActive = false; }
+    public void deactivate() {
+        this.active = false;
+    }
 }

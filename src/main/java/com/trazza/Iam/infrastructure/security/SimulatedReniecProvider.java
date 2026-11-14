@@ -1,42 +1,25 @@
-package com.trazza.iam.infrastructure.security;
+package com.trazza.platform.iam.infrastructure.security;
 
-import com.trazza.iam.application.internal.outboundservices.IdentityVerificationProvider;
+import com.trazza.platform.iam.application.internal.outboundservices.security.IdentityVerificationProvider;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.CompletableFuture;
 
-/**
- * Simulated RENIEC check for the MVP: every DNI is validated except the test DNI 00000000.
- */
+/** Simulated RENIEC check for the MVP: every DNI is validated except the test DNI {@code 00000000}. */
 @Service
 public class SimulatedReniecProvider implements IdentityVerificationProvider {
 
     public static final String REJECTED_TEST_DNI = "00000000";
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     @Override
-    public CompletableFuture<ReniecVerificationResult> verify(String dni, String fullName) {
-        String timestamp = LocalDateTime.now().format(FORMATTER);
-        String last3 = dni.length() >= 3 ? dni.substring(dni.length() - 3) : dni;
-        String reference = String.format("RENIEC-SIM-%s-%s", timestamp, last3);
-
-        if (REJECTED_TEST_DNI.equals(dni)) {
-            return CompletableFuture.completedFuture(
-                    new ReniecVerificationResult(false, reference, "dni-not-found-in-reniec")
-            );
-        }
-
-        return CompletableFuture.completedFuture(
-                new ReniecVerificationResult(true, reference, null)
-        );
+    public VerificationOutcome verify(String dni, String fullName) {
+        var reference = "RENIEC-SIM-" + ZonedDateTime.now(ZoneOffset.UTC).format(STAMP) + "-"
+                + dni.substring(dni.length() - 3);
+        return REJECTED_TEST_DNI.equals(dni)
+                ? new VerificationOutcome(false, reference, "dni-not-found-in-reniec")
+                : new VerificationOutcome(true, reference, null);
     }
-
-    // Record para reemplazar la Tupla de C# (bool Approved, string Reference, string? Reason)
-    public record ReniecVerificationResult(
-            boolean approved,
-            String reference,
-            String reason
-    ) {}
 }

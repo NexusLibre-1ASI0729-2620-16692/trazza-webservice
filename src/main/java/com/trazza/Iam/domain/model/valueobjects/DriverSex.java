@@ -1,5 +1,8 @@
-package com.trazza.iam.domain.model.valueobjects;
+package com.trazza.platform.iam.domain.model.valueobjects;
 
+/** Optional sex of a fleet driver ({@code drivers.sex}). */
 public enum DriverSex {
-    MALE, FEMALE, OTHER
+    F,
+    M,
+    X
 }
