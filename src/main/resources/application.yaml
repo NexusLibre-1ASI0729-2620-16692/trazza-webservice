@@ -7,5 +7,13 @@ spring:
     fallback-to-system-locale: false
 
 trazza:
+  token:
+    secret: ${TOKEN_SECRET:}
+    issuer: trazza-platform
+    access-token-minutes: 60
+    refresh-token-days: 14
+  personal-data:
+    encryption-key: ${PERSONAL_DATA_ENCRYPTION_KEY:}
+    hash-key: ${PERSONAL_DATA_HASH_KEY:}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
