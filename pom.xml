@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.trazza</groupId>
     <artifactId>trazza-webservice</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>trazza-webservice</name>
     <description>trazza-webservice</description>
     <url/>
