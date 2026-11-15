@@ -1,6 +1,6 @@
 package com.trazza.trazzawebservice.iam.infrastructure.authorization;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.trazza.trazzawebservice.shared.domain.model.CommandError;
 import com.trazza.trazzawebservice.shared.interfaces.rest.transform.ProblemDetailsAssembler;
 import jakarta.servlet.http.HttpServletRequest;
